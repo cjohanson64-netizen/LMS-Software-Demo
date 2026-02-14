@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  role         Role         @default(STUDENT)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  taughtCourses Course[]    @relation("TeacherCourses")
+  enrollments   Enrollment[]
+  submissions   Submission[]
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  teacherId   String
+  teacher     User         @relation("TeacherCourses", fields: [teacherId], references: [id])
+
+  enrollments Enrollment[]
+  modules     Module[]
+  assignments Assignment[]
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId    String
+  courseId  String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  title     String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model Assignment {
+  id           String      @id @default(cuid())
+  title        String
+  instructions String?
+  dueAt        DateTime?
+  points       Int         @default(100)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  courseId     String
+  course       Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  submissions  Submission[]
+}
+
+model Submission {
+  id            String     @id @default(cuid())
+  content       String?
+  attachmentUrl String?
+  submittedAt   DateTime   @default(now())
+  createdAt    DateTime @default(now())
+
+  assignmentId  String
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  studentId     String
+  student       User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  grade         Int?
+  feedback      String?
+  gradedAt      DateTime?
+
+  @@unique([assignmentId, studentId])
+}
